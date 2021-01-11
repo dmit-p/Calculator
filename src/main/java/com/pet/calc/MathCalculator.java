@@ -10,7 +10,8 @@ public class MathCalculator{
     
 	private List<Token> InfixToPostfix(List<Token> inTokens)
 	{
-	        OperatorsList opList = new OperatorsList();  
+	        OperatorsList opList = new OperatorsList();
+	        FunctionList  funList = new FunctionList();
 	        Stack<Token>  opStack  = new Stack<>();
 	        List<Token> outTokens = new ArrayList<>();
 	        int i =0;
@@ -99,11 +100,22 @@ public class MathCalculator{
 		        				
 		        				if (opStack.peek().isLeftBracket()) {
 		        					opStack.pop();
+		        					
+			        				// непонятно нужно или нет
+			        				if (!opStack.empty()&&funList.isFunction(opStack.peek().getString())){
+			        					outTokens.add(opStack.pop());
+			        				}
+			        				//
 		        					break;
 		        				}
 		        				outTokens.add(opStack.pop());
 		        			}
 	        			}
+	        			break;
+	        		case Token.WORD:
+	        				if(funList.isFunction(t.getString())) {
+	        					opStack.push(t);
+	        				}
 	        			break;
 	        		default:
 				}
@@ -119,7 +131,9 @@ public class MathCalculator{
 	}
     
     public double evalute(String exp) {
-        Parser parser = new Parser();
+    	FunctionList  funList = new FunctionList();
+    	
+    	Parser parser = new Parser();
         List<Token> tokens = parser.parseString(exp);
         
 		System.out.println("***Execute expression***");
@@ -165,8 +179,30 @@ public class MathCalculator{
 				}
 				else
 				{
-					//Возможно это зарезервированное слово
-					System.out.println("ERROR");
+					String str = t.getString();
+					Function fun = funList.find(str);
+					if (fun!=null) {
+						int numArgs=fun.getNumArgs();
+						if (numArgs==1) {
+							Double op2=0.0;
+							Double op1=stack.pop();
+							Double res=fun.execute(op1,op2);
+							stack.push(res);										
+						}
+						if (numArgs==2)	{
+							Double op2=stack.pop();
+							Double op1=stack.pop();
+							Double res=fun.execute(op1,op2);
+							stack.push(res);										
+						}
+							
+					}
+					else
+					{
+						//Возможно это неизвестная функция!!!
+						System.out.println("ERROR");						
+					}
+
 				}
 			}
 		}
@@ -408,3 +444,50 @@ class OperatorsList{
 	}
 }
 
+enum Function {
+	CUBE("cube",1){
+		double execute(double op1, double op2) {
+			return op1*op1;
+		}
+	}; 
+	private int numArgs;
+	private String str;
+	
+	Function(String str, int numArgs){
+		this.str = str;
+		this.numArgs = numArgs;
+	}
+	String getString() {
+		return str;
+	}
+	int getNumArgs()
+	{
+		return numArgs;
+	}
+	void   execute() {}
+	double execute(double op1, double op2) {
+		return 0;
+	}
+}
+
+class FunctionList{
+	private Map<String,Function> map; 
+	
+	FunctionList(){
+		map = new HashMap<>();
+		Function[] functions= Function.values();
+		for(Function fn: functions) {
+			map.put(fn.getString(), fn);
+		}
+	}
+	boolean isFunction (String str){
+		boolean isFunction = map.containsKey(str);
+		return isFunction;
+	}
+
+	
+	public Function find(String str){
+		Function fn = map.get(str);
+		return fn;
+	}
+}

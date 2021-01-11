@@ -34,5 +34,18 @@ public class MathCalculatorTests {
     public void expr6Test() {
      	assertTrue(calc.evalute("10.0*-2")==(10.0*-2));
     }
+    @Test
+    public void expr7Test() {
+     	assertTrue(calc.evalute("1+cube(2)+2")==(1+(2*2)+2));
+    }
+    @Test
+    public void expr8Test() {
+     	assertTrue(calc.evalute("1+cube(2)/2.0")==(1+(2*2)/2.0));
+    }
+    @Test
+    public void expr9Test() {
+     	assertTrue(calc.evalute("10/cube(2)/2.0")==(10.0/(2*2)/2.0));
+    }
+    
 
 }
