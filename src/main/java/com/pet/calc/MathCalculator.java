@@ -13,7 +13,7 @@ public class MathCalculator{
 	        OperatorsList opList = new OperatorsList();  
 	        Stack<Token>  opStack  = new Stack<>();
 	        List<Token> outTokens = new ArrayList<>();
-
+	        int i =0;
 	        for(Token t : inTokens) {
 	        	int type = t.getType();
 	        	switch (type)
@@ -22,6 +22,19 @@ public class MathCalculator{
 						outTokens.add(t);
 						break;
 	        		case Token.OPERATOR: 
+	        			boolean isUMinus = false;
+	        			if (i>0) 
+	        			{
+	        				Token prevToken = inTokens.get(i-1);
+	        				if (t.getString().equals("-") && (prevToken.getString().equals("*") || prevToken.getString().equals("/")))
+	        				{
+	        					isUMinus=true;
+	        					t.putString("u-");
+	        				}
+	        			}
+	        			
+	        				
+	        			
 	        			if (opStack.isEmpty()) {
 	        				opStack.push(t);
 	        			}else 
@@ -34,19 +47,43 @@ public class MathCalculator{
 	            			Operator currentOperator = opList.find(t.getString()); 
 	            			
 	            			
-	       					if (stackOperator.getPriority() < stackOperator.getPriority()) {
-	            				opStack.push(t);
-	            			}
-	       					else 
+	            			if (isUMinus)
 	            			{
-	                			while ( !opStack.isEmpty()) {
-	                    			Operator stOperator = opList.find(opStack.peek().getString());
-	                				if (stOperator.getPriority() < currentOperator.getPriority() ){
-	                					break;
-	                				}
-	                				outTokens.add(opStack.pop());
-	                			}
-	                			opStack.push(t);
+		            			//для u
+		       					if (stackOperator.getPriority() <= currentOperator.getPriority()) {
+		            				opStack.push(t);
+		            			}
+		       					else 
+		            			{
+		                			while ( !opStack.isEmpty()) {
+		                    			Operator stOperator = opList.find(opStack.peek().getString());
+		                				if (stOperator.getPriority() <= currentOperator.getPriority() ){
+		                					break;
+		                				}
+		                				outTokens.add(opStack.pop());
+		                			}
+		                			opStack.push(t);
+		            			}
+	            				
+	            			}
+	            			else
+	            			{
+		            			//для + - * /
+		       					if (stackOperator.getPriority() < currentOperator.getPriority()) {
+		            				opStack.push(t);
+		            			}
+		       					else 
+		            			{
+		                			while ( !opStack.isEmpty()) {
+		                    			Operator stOperator = opList.find(opStack.peek().getString());
+		                				if (stOperator.getPriority() < currentOperator.getPriority() ){
+		                					break;
+		                				}
+		                				outTokens.add(opStack.pop());
+		                			}
+		                			opStack.push(t);
+		            			}
+	            				
 	            			}
 	       				}
 	        			break;
@@ -70,6 +107,7 @@ public class MathCalculator{
 	        			break;
 	        		default:
 				}
+	        	i++;
 	        }
 	        // выгрузка
 			while( !opStack.isEmpty())
@@ -106,10 +144,22 @@ public class MathCalculator{
 					}
 					else
 					{
-						Double op2=stack.pop();
-						Double op1=stack.pop();
-						Double res=op.execute(op1,op2);
-						stack.push(res);			
+						if (op == Operator.UMINUS)
+						{
+							Double op2=0.0;
+							Double op1=stack.pop();
+							Double res=op.execute(op1,op2);
+							stack.push(res);										
+							
+						}
+						else
+						{
+							Double op2=stack.pop();
+							Double op1=stack.pop();
+							Double res=op.execute(op1,op2);
+							stack.push(res);										
+						}
+
 					}
 
 				}
@@ -279,37 +329,50 @@ class Token{
 	}
 }
 
+//left_associative binary
+//right_associative_unary 
 
 
-
+enum TypeOperator {LEFT_ASSOCIATIVE_UNARY, RIGHT_ASSOCIATIVE_UNARY, LEFT_ASSOCIATIVE_BINARY, RIGHT_ASSOCIATIVE_BINARY}
 
 enum Operator {
 /*	UNKNOWN("", 0){
 		void execute() {}
 	}, */
-	PLUS("+",1){
+	PLUS("+",1, TypeOperator.LEFT_ASSOCIATIVE_BINARY){
 		double execute(double op1, double op2) {
 			return op1 + op2;
 		}
-	}, MINUS("-", 1){
+	}, 
+	MINUS("-", 1, TypeOperator.LEFT_ASSOCIATIVE_BINARY){
 		double execute(double op1, double op2) {
 			return op1 - op2;
 		}
-	}, MUL("*", 2){
+	}, 
+	MUL("*", 2, TypeOperator.LEFT_ASSOCIATIVE_BINARY){
 		double execute(double op1, double op2) {
 			return op1 * op2;
 		}
 	}
-	, DIV("/",2){
+	, 
+	DIV("/",2, TypeOperator.LEFT_ASSOCIATIVE_BINARY){
 		double execute(double op1, double op2) {
 			return op1 / op2;
 		}
+	}
+	, 
+	UMINUS("u-",3, TypeOperator.RIGHT_ASSOCIATIVE_UNARY){
+		double execute(double op1, double op2) {
+			return op1 * (-1);
+		}		
 	};
 	private int priority;
 	private String str;
-	Operator(String str, int priority){
+	private TypeOperator type;
+	Operator(String str, int priority, TypeOperator type){
 		this.str = str;
 		this.priority = priority;
+		this.type=type;
 	}
 	int getPriority() {
 		return this.priority;

@@ -30,4 +30,9 @@ public class MathCalculatorTests {
     public void expr5Test() {
      	assertTrue(calc.evalute("34.0/45.0+124.0-67.23E+01")==(34.0/45.0+124.0-67.23E+01));
     }
+    @Test
+    public void expr6Test() {
+     	assertTrue(calc.evalute("10.0*-2")==(10.0*-2));
+    }
+
 }
