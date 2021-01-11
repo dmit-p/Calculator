@@ -447,9 +447,35 @@ class OperatorsList{
 enum Function {
 	CUBE("cube",1){
 		double execute(double op1, double op2) {
-			return op1*op1;
+			return op1*op1*op1;
 		}
-	}; 
+	},
+	ABS("abs",1){
+		double execute(double op1, double op2) {
+			if (op1>=0) {
+				return op1;
+			}
+			else {
+				return -1.0*op1;
+			}
+		}
+	},
+	SQRT("sqrt",1){
+		double execute(double op1, double op2) {
+			if (op1>=0) {
+				return Math.sqrt(op1);
+			}
+			else
+			{
+				System.out.println("ERROR: arg<0");
+				return 0;
+			}
+
+		}
+	}
+	
+	
+	; 
 	private int numArgs;
 	private String str;
 	
