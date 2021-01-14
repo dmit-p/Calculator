@@ -8,7 +8,7 @@ public class MathCalculator{
     private OperatorsList opList = new OperatorsList();  
     
     
-	private List<Token> InfixToPostfix(List<Token> inTokens)
+	private List<Token> InfixToPostfix(List<Token> inTokens) throws MathCalcException
 	{
 	        OperatorsList opList = new OperatorsList();
 	        FunctionList  funList = new FunctionList();
@@ -30,7 +30,7 @@ public class MathCalculator{
 	        				if (t.getString().equals("-") && (prevToken.getString().equals("*") || prevToken.getString().equals("/")))
 	        				{
 	        					isUMinus=true;
-	        					t.putString("u-");
+	        					t.putString(Operator.UMINUS.getString());
 	        				}
 	        			}
 	        			
@@ -50,8 +50,9 @@ public class MathCalculator{
 	            			
 	            			if (isUMinus)
 	            			{
-		            			//для u
-		       					if (stackOperator.getPriority() <= currentOperator.getPriority()) {
+		            			//for operator unary minus
+
+	            				if (stackOperator.getPriority() <= currentOperator.getPriority()) {
 		            				opStack.push(t);
 		            			}
 		       					else 
@@ -69,7 +70,7 @@ public class MathCalculator{
 	            			}
 	            			else
 	            			{
-		            			//для + - * /
+		            			//for operators: '+', '-', '*', '/'
 		       					if (stackOperator.getPriority() < currentOperator.getPriority()) {
 		            				opStack.push(t);
 		            			}
@@ -96,12 +97,14 @@ public class MathCalculator{
 	        			}
 	        			else
 	        			{
-		        			while ( !opStack.isEmpty()  ) {
+		        			boolean isLeftBracket = false;
+	        				while ( !opStack.isEmpty()  ) {
 		        				
 		        				if (opStack.peek().isLeftBracket()) {
+		        					isLeftBracket=true;
 		        					opStack.pop();
 		        					
-			        				// непонятно нужно или нет
+			        				//If word equals name function
 			        				if (!opStack.empty()&&funList.isFunction(opStack.peek().getString())){
 			        					outTokens.add(opStack.pop());
 			        				}
@@ -110,11 +113,19 @@ public class MathCalculator{
 		        				}
 		        				outTokens.add(opStack.pop());
 		        			}
+	        				if (isLeftBracket == false) {
+	        					throw new MathCalcException("Unpaired brackets");
+	        				}
+		        			
 	        			}
 	        			break;
 	        		case Token.WORD:
 	        				if(funList.isFunction(t.getString())) {
 	        					opStack.push(t);
+	        				}
+	        				else
+	        				{
+	        					throw new MathCalcException("Unknown word: "+t.getString());
 	        				}
 	        			break;
 	        		default:
@@ -130,15 +141,15 @@ public class MathCalculator{
 		
 	}
     
-    public double evalute(String exp) {
+    public double evalute(String exp) throws MathCalcException{
     	FunctionList  funList = new FunctionList();
     	
     	Parser parser = new Parser();
         List<Token> tokens = parser.parseString(exp);
-        
+        /* for debug
 		System.out.println("***Execute expression***");
 		tokens.stream().forEach((value) -> System.out.println(value));
-		
+		*/
 		List<Token> postfixTokens = InfixToPostfix(tokens);
 		Stack<Double>  stack  = new Stack<>();
 		for(Token t : postfixTokens)
@@ -158,21 +169,14 @@ public class MathCalculator{
 					}
 					else
 					{
-						if (op == Operator.UMINUS)
-						{
-							Double op2=0.0;
-							Double op1=stack.pop();
-							Double res=op.execute(op1,op2);
-							stack.push(res);										
-							
+						Double op1=0.0;
+						Double op2=0.0;
+						if (op != Operator.UMINUS){
+							op2=stack.pop();
 						}
-						else
-						{
-							Double op2=stack.pop();
-							Double op1=stack.pop();
-							Double res=op.execute(op1,op2);
-							stack.push(res);										
-						}
+						op1=stack.pop();
+						Double res=op.execute(op1,op2);
+						stack.push(res);										
 
 					}
 
@@ -183,24 +187,18 @@ public class MathCalculator{
 					Function fun = funList.find(str);
 					if (fun!=null) {
 						int numArgs=fun.getNumArgs();
-						if (numArgs==1) {
-							Double op2=0.0;
-							Double op1=stack.pop();
-							Double res=fun.execute(op1,op2);
-							stack.push(res);										
-						}
+						Double op1=0.0;
+						Double op2=0.0;
 						if (numArgs==2)	{
-							Double op2=stack.pop();
-							Double op1=stack.pop();
-							Double res=fun.execute(op1,op2);
-							stack.push(res);										
+							op2=stack.pop();
 						}
-							
+						op1=stack.pop();
+						Double res=fun.execute(op1,op2);
+						stack.push(res);										
 					}
 					else
 					{
-						//Возможно это неизвестная функция!!!
-						System.out.println("ERROR");						
+						throw new MathCalcException("Unknown error");
 					}
 
 				}
@@ -392,7 +390,10 @@ enum Operator {
 	}
 	, 
 	DIV("/",2, TypeOperator.LEFT_ASSOCIATIVE_BINARY){
-		double execute(double op1, double op2) {
+		double execute(double op1, double op2) throws MathCalcException {
+			if (op2==0) {
+				throw new MathCalcException("Division by zero");
+			}
 			return op1 / op2;
 		}
 	}
@@ -416,8 +417,8 @@ enum Operator {
 	String getString() {
 		return str;
 	}
-	void   execute() {}
-	double execute(double op1, double op2) {
+	void   execute() throws MathCalcException {}
+	double execute(double op1, double op2) throws MathCalcException{
 		return 0;
 	}
 }
@@ -461,9 +462,21 @@ enum Function {
 		}
 	},
 	SQRT("sqrt",1){
-		double execute(double op1, double op2) {
+		double execute(double op1, double op2) throws MathCalcException{
 			if (op1>=0) {
 				return Math.sqrt(op1);
+			}
+			else
+			{
+				throw new MathCalcException("Function sqrt: arg<0");
+			}
+
+		}
+	},
+	SIN("sin",1){
+		double execute(double op1, double op2) {
+			if (op1>=0) {
+				return Math.sin(op1);
 			}
 			else
 			{
@@ -472,8 +485,20 @@ enum Function {
 			}
 
 		}
-	}
-	
+	},
+	COS("cos",1){
+		double execute(double op1, double op2) {
+			if (op1>=0) {
+				return Math.cos(op1);
+			}
+			else
+			{
+				System.out.println("ERROR: arg<0");
+				return 0;
+			}
+
+		}
+	}		
 	
 	; 
 	private int numArgs;
@@ -491,7 +516,7 @@ enum Function {
 		return numArgs;
 	}
 	void   execute() {}
-	double execute(double op1, double op2) {
+	double execute(double op1, double op2) throws MathCalcException {
 		return 0;
 	}
 }
