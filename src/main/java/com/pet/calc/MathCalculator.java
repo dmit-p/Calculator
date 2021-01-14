@@ -3,10 +3,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 public class MathCalculator{
     private OperatorsList opList = new OperatorsList();  
-    
     
 	private List<Token> InfixToPostfix(List<Token> inTokens) throws MathCalcException
 	{
@@ -24,17 +22,13 @@ public class MathCalculator{
 						break;
 	        		case Token.OPERATOR: 
 	        			boolean isUMinus = false;
-	        			if (i>0) 
-	        			{
+	        			if (i>0) { 
 	        				Token prevToken = inTokens.get(i-1);
-	        				if (t.getString().equals("-") && (prevToken.getString().equals("*") || prevToken.getString().equals("/")))
-	        				{
+	        				if (t.strEq("-") && (prevToken.strEq("*") || prevToken.strEq("/"))) {
 	        					isUMinus=true;
 	        					t.putString(Operator.UMINUS.getString());
 	        				}
 	        			}
-	        			
-	        				
 	        			
 	        			if (opStack.isEmpty()) {
 	        				opStack.push(t);
@@ -43,63 +37,40 @@ public class MathCalculator{
 	       					opStack.push(t);
 	       				}else 
 	       				{
-	            			Token stackToken = opStack.peek(); 
-	       					Operator stackOperator = opList.find(stackToken.getString());
-	            			Operator currentOperator = opList.find(t.getString()); 
-	            			
-	            			
+	            			Operator currentOperator = opList.find(t.getString());
 	            			if (isUMinus)
 	            			{
 		            			//for operator unary minus
-
-	            				if (stackOperator.getPriority() <= currentOperator.getPriority()) {
-		            				opStack.push(t);
-		            			}
-		       					else 
-		            			{
-		                			while ( !opStack.isEmpty()) {
-		                    			Operator stOperator = opList.find(opStack.peek().getString());
-		                				if (stOperator.getPriority() <= currentOperator.getPriority() ){
-		                					break;
-		                				}
-		                				outTokens.add(opStack.pop());
-		                			}
-		                			opStack.push(t);
-		            			}
-	            				
+	                			while ( !opStack.isEmpty()) {
+	                    			Operator stOperator = opList.find(opStack.peek().getString());
+	                				if (stOperator.getPriority() <= currentOperator.getPriority() ){
+	                					break;
+	                				}
+	                				outTokens.add(opStack.pop());
+	                			}
 	            			}
 	            			else
 	            			{
 		            			//for operators: '+', '-', '*', '/'
-		       					if (stackOperator.getPriority() < currentOperator.getPriority()) {
-		            				opStack.push(t);
-		            			}
-		       					else 
-		            			{
-		                			while ( !opStack.isEmpty()) {
-		                    			Operator stOperator = opList.find(opStack.peek().getString());
-		                				if (stOperator.getPriority() < currentOperator.getPriority() ){
-		                					break;
-		                				}
-		                				outTokens.add(opStack.pop());
-		                			}
-		                			opStack.push(t);
-		            			}
-	            				
+	                			while ( !opStack.isEmpty()) {
+	                    			Operator stOperator = opList.find(opStack.peek().getString());
+	                				if (stOperator.getPriority() < currentOperator.getPriority() ){
+	                					break;
+	                				}
+	                				outTokens.add(opStack.pop());
+	                			}
 	            			}
+	            			opStack.push(t);
 	       				}
 	        			break;
 	        			
 	        		case Token.BRACKET:	
-	        			if (t.isLeftBracket())
-	        			{
+	        			if (t.isLeftBracket()) {
 	        				opStack.push(t);
 	        			}
-	        			else
-	        			{
+	        			else {
 		        			boolean isLeftBracket = false;
 	        				while ( !opStack.isEmpty()  ) {
-		        				
 		        				if (opStack.peek().isLeftBracket()) {
 		        					isLeftBracket=true;
 		        					opStack.pop();
@@ -108,7 +79,6 @@ public class MathCalculator{
 			        				if (!opStack.empty()&&funList.isFunction(opStack.peek().getString())){
 			        					outTokens.add(opStack.pop());
 			        				}
-			        				//
 		        					break;
 		        				}
 		        				outTokens.add(opStack.pop());
@@ -116,91 +86,75 @@ public class MathCalculator{
 	        				if (isLeftBracket == false) {
 	        					throw new MathCalcException("Unpaired brackets");
 	        				}
-		        			
 	        			}
 	        			break;
 	        		case Token.WORD:
 	        				if(funList.isFunction(t.getString())) {
 	        					opStack.push(t);
+	        					break;
 	        				}
-	        				else
-	        				{
-	        					throw new MathCalcException("Unknown word: "+t.getString());
-	        				}
-	        			break;
+        					throw new MathCalcException("Unknown word: "+t.getString());
+	        			
 	        		default:
+	        				throw new MathCalcException("Unknown error");
 				}
 	        	i++;
 	        }
-	        // выгрузка
-			while( !opStack.isEmpty())
-			{
-				outTokens.add(opStack.pop());
+	        
+	        // unload everything from the stack
+	        while( !opStack.isEmpty()) {
+				Token t = opStack.pop();
+				if (!t.isOperator())
+				{
+					throw new MathCalcException("Unpaired brackets");
+				}
+	        	outTokens.add(t);
 			}
 			return outTokens;
-		
 	}
     
     public double evalute(String exp) throws MathCalcException{
     	FunctionList  funList = new FunctionList();
-    	
     	Parser parser = new Parser();
         List<Token> tokens = parser.parseString(exp);
-        /* for debug
-		System.out.println("***Execute expression***");
+        /* for debug print tokens
 		tokens.stream().forEach((value) -> System.out.println(value));
 		*/
 		List<Token> postfixTokens = InfixToPostfix(tokens);
 		Stack<Double>  stack  = new Stack<>();
 		for(Token t : postfixTokens)
 		{
-			if (t.isEualType(Token.NUMBER))
-			{
+			if (t.isEualType(Token.NUMBER)) {
 				stack.push(Double.valueOf(t.getString()));
 			}
-			else
-			{
+			else {
+				Double op1=0.0;
+				Double op2=0.0;
+				String str = t.getString();
 				if (t.isEualType(Token.OPERATOR)) {
-					String str = t.getString();
 					Operator op = opList.find(str);
-					if (op == null)
-					{
-						System.out.println("ERROR: Operator.UNKNOWN");
-					}
-					else
-					{
-						Double op1=0.0;
-						Double op2=0.0;
-						if (op != Operator.UMINUS){
-							op2=stack.pop();
-						}
-						op1=stack.pop();
-						Double res=op.execute(op1,op2);
-						stack.push(res);										
-
-					}
-
-				}
-				else
-				{
-					String str = t.getString();
-					Function fun = funList.find(str);
-					if (fun!=null) {
-						int numArgs=fun.getNumArgs();
-						Double op1=0.0;
-						Double op2=0.0;
-						if (numArgs==2)	{
-							op2=stack.pop();
-						}
-						op1=stack.pop();
-						Double res=fun.execute(op1,op2);
-						stack.push(res);										
-					}
-					else
-					{
+					if (op == null) {
 						throw new MathCalcException("Unknown error");
 					}
-
+					if (op != Operator.UMINUS){
+						op2=stack.pop();
+					}
+					op1=stack.pop();
+					Double res=op.execute(op1,op2);
+					stack.push(res);										
+				}
+				else {
+					Function fun = funList.find(str);
+					if (fun==null) {
+						throw new MathCalcException("Unknown error");
+					}
+					int numArgs=fun.getNumArgs();
+					if (numArgs==2)	{
+						op2=stack.pop();
+					}
+					op1=stack.pop();
+					Double res=fun.execute(op1,op2);
+					stack.push(res);										
 				}
 			}
 		}
@@ -210,26 +164,23 @@ public class MathCalculator{
 }
 
 
-
-
-
 class Parser{
 	private static OperatorsList operatorsList; 
 	private static Pattern regexpSingeleChar;
 	private static Pattern regexpNumber;
 	{
 		operatorsList = new OperatorsList();
+		//to search for single-character separators (including operators and brackets)
+		//add when adding operators
 		regexpSingeleChar = Pattern.compile("[\\s\\t\\x28-\\x2B\\x2D\\x2F]");
-    	regexpNumber = Pattern.compile("[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\\d+)?");
+    	//to search number
+		regexpNumber = Pattern.compile("[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\\d+)?");
 	}
-	
-	Parser(){}
 
 	private static final List<String> bracketList = Arrays.asList("(", ")");
 	   private void helperParser(String str, List<Token> tokens)
 	   {
 	        if (str.length()>0){ 
-	        
 	        Matcher m = regexpSingeleChar.matcher(str);
 	        int pos = 0;
 	        while (m.find()) {
@@ -239,9 +190,7 @@ class Parser{
 	                tokens.add(new Token(str.substring(pos, start), Token.WORD));
 	            }
 	            if(end>start){
-
 	                String substr = str.substring(start, end);
-	                
 	                if (operatorsList.isOperator(substr)) {
 	                	tokens.add(new Token(substr,Token.OPERATOR));
 	                }
@@ -249,7 +198,7 @@ class Parser{
 	                if (bracketList.contains(substr)) {
 	            		tokens.add(new Token(substr,Token.BRACKET));
 	            	}
-	            	
+	                // else if  \s or \t then skip char 
 	            }
 	            pos=end;
 	        }
@@ -279,10 +228,7 @@ class Parser{
         }
         helperParser(text.substring(pos, text.length()),  tokens);
         return tokens;
-
 	}
-	
-
 }
 
 /* Контайнер для иинимальной синтаксичиской 
@@ -361,18 +307,15 @@ class Token{
 	public boolean isRightBracket() {
 		return this.type==BRACKET && str.equals(")");
 	}
+	public boolean strEq(String str) {
+		return this.str.equals(str);
+	}
 }
 
-//left_associative binary
-//right_associative_unary 
-
-
+// for expand the list of operators
 enum TypeOperator {LEFT_ASSOCIATIVE_UNARY, RIGHT_ASSOCIATIVE_UNARY, LEFT_ASSOCIATIVE_BINARY, RIGHT_ASSOCIATIVE_BINARY}
 
 enum Operator {
-/*	UNKNOWN("", 0){
-		void execute() {}
-	}, */
 	PLUS("+",1, TypeOperator.LEFT_ASSOCIATIVE_BINARY){
 		double execute(double op1, double op2) {
 			return op1 + op2;
@@ -405,7 +348,7 @@ enum Operator {
 	};
 	private int priority;
 	private String str;
-	private TypeOperator type;
+	private TypeOperator type;// for expand the list of operators
 	Operator(String str, int priority, TypeOperator type){
 		this.str = str;
 		this.priority = priority;
@@ -433,11 +376,11 @@ class OperatorsList{
 			map.put(op.getString(), op);
 		}
 	}
+	
 	boolean isOperator (String str){
 		boolean isOperator = map.containsKey(str);
 		return isOperator;
 	}
-
 	
 	public Operator find(String str){
 		Operator op = map.get(str);
@@ -466,11 +409,9 @@ enum Function {
 			if (op1>=0) {
 				return Math.sqrt(op1);
 			}
-			else
-			{
+			else {
 				throw new MathCalcException("Function sqrt: arg<0");
 			}
-
 		}
 	},
 	SIN("sin",1){
@@ -478,12 +419,10 @@ enum Function {
 			if (op1>=0) {
 				return Math.sin(op1);
 			}
-			else
-			{
+			else {
 				System.out.println("ERROR: arg<0");
 				return 0;
 			}
-
 		}
 	},
 	COS("cos",1){
@@ -491,16 +430,13 @@ enum Function {
 			if (op1>=0) {
 				return Math.cos(op1);
 			}
-			else
-			{
+			else {
 				System.out.println("ERROR: arg<0");
 				return 0;
 			}
-
 		}
-	}		
+	};
 	
-	; 
 	private int numArgs;
 	private String str;
 	
@@ -508,14 +444,18 @@ enum Function {
 		this.str = str;
 		this.numArgs = numArgs;
 	}
+	
 	String getString() {
 		return str;
 	}
+	
 	int getNumArgs()
 	{
 		return numArgs;
 	}
+	
 	void   execute() {}
+	
 	double execute(double op1, double op2) throws MathCalcException {
 		return 0;
 	}
@@ -531,11 +471,11 @@ class FunctionList{
 			map.put(fn.getString(), fn);
 		}
 	}
+	
 	boolean isFunction (String str){
 		boolean isFunction = map.containsKey(str);
 		return isFunction;
 	}
-
 	
 	public Function find(String str){
 		Function fn = map.get(str);

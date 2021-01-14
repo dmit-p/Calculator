@@ -131,6 +131,16 @@ public class MathCalculatorTests {
     @Test
     public void expr15_Test() {
     	try {
+     	calc.evalute("(2+2/2");
+     	fail("Expected MathCalcException");
+     	}catch(MathCalcException e) {
+     		Assert.assertEquals("Unpaired brackets", e.getMessage());
+     	}
+    }
+
+    @Test
+    public void expr16_Test() {
+    	try {
      	calc.evalute("unknown(1)");
      	fail("Expected MathCalcException");
      	}catch(MathCalcException e) {
