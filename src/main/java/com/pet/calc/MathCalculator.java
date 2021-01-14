@@ -4,12 +4,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MathCalculator{
-    private OperatorsList opList = new OperatorsList();  
-    
+	private boolean debug;
+	MathCalculator()
+	{
+		debug = false;
+	}
+	
+	public void setDebug(boolean debug) {
+		this.debug=debug;
+	}
+	
 	private List<Token> InfixToPostfix(List<Token> inTokens) throws MathCalcException
 	{
-	        OperatorsList opList = new OperatorsList();
-	        FunctionsList  funList = new FunctionsList();
 	        Stack<Token>  opStack  = new Stack<>();
 	        List<Token> outTokens = new ArrayList<>();
 	        int i =0;
@@ -45,12 +51,12 @@ public class MathCalculator{
 	       					opStack.push(t);
 	       				}else 
 	       				{
-	            			Operator currentOperator = opList.find(t.getString());
+	            			Operator currentOperator = OperatorsList.find(t.getString());
 	            			if (isUMinus)
 	            			{
 		            			//for operator unary minus
 	                			while ( !opStack.isEmpty()) {
-	                    			Operator stOperator = opList.find(opStack.peek().getString());
+	                    			Operator stOperator = OperatorsList.find(opStack.peek().getString());
 	                				if (stOperator.getPriority() <= currentOperator.getPriority() ){
 	                					break;
 	                				}
@@ -61,7 +67,7 @@ public class MathCalculator{
 	            			{
 		            			//for operators: '+', '-', '*', '/'
 	                			while ( !opStack.isEmpty()) {
-	                    			Operator stOperator = opList.find(opStack.peek().getString());
+	                    			Operator stOperator = OperatorsList.find(opStack.peek().getString());
 	                				if (stOperator.getPriority() < currentOperator.getPriority() ){
 	                					break;
 	                				}
@@ -84,7 +90,7 @@ public class MathCalculator{
 		        					opStack.pop();
 		        					
 			        				//If word equals name function
-			        				if (!opStack.empty()&&funList.isFunction(opStack.peek().getString())){
+			        				if (!opStack.empty()&&FunctionsList.isFunction(opStack.peek().getString())){
 			        					outTokens.add(opStack.pop());
 			        				}
 		        					break;
@@ -104,7 +110,7 @@ public class MathCalculator{
 	        			}
 	        			break;
 	        		case Token.WORD:
-	        				if(funList.isFunction(t.getString())) {
+	        				if(FunctionsList.isFunction(t.getString())) {
 	        					opStack.push(t);
 	        					break;
 	        				}
@@ -129,12 +135,13 @@ public class MathCalculator{
 	}
     
     public double evalute(String exp) throws MathCalcException{
-    	FunctionsList  funList = new FunctionsList();
-    	Parser parser = new Parser();
-        List<Token> tokens = parser.parseString(exp);
+        List<Token> tokens = Parser.parseString(exp);
         // for debug print tokens
-		tokens.stream().forEach((value) -> System.out.println(value));
-		//
+        if (debug) {
+        	System.out.println("Function evalute list tokens:");
+        	tokens.stream().forEach((value) -> System.out.println(value));
+        	System.out.println("list tokens end");
+        }
 		List<Token> postfixTokens = InfixToPostfix(tokens);
 		Stack<Double>  stack  = new Stack<>();
 		for(Token t : postfixTokens)
@@ -147,7 +154,7 @@ public class MathCalculator{
 				Double op2=0.0;
 				String str = t.getString();
 				if (t.isEualType(Token.OPERATOR)) {
-					Operator op = opList.find(str);
+					Operator op = OperatorsList.find(str);
 					if (op == null) {
 						throw new MathCalcException("Unknown error");
 					}
@@ -159,7 +166,7 @@ public class MathCalculator{
 					stack.push(res);										
 				}
 				else {
-					Function fun = funList.find(str);
+					Function fun = FunctionsList.find(str);
 					if (fun==null) {
 						throw new MathCalcException("Unknown error");
 					}
@@ -180,22 +187,20 @@ public class MathCalculator{
 
 
 class Parser{
-	private static FunctionsList functionsList;
-	private static OperatorsList operatorsList; 
-	private static Pattern regexpSingeleChar;
-	private static Pattern regexpNumber;
-	{
-		functionsList = new FunctionsList();
-		operatorsList = new OperatorsList();
+	private static final Pattern regexpSingeleChar;
+	private static final Pattern regexpNumber;
+	private static final List<String> bracketList;
+	static {
 		//to search for single-character separators (including operators and brackets)
 		//add when adding operators
 		regexpSingeleChar = Pattern.compile("[\\s\\t\\x28-\\x2B\\x2C\\x2D\\x2F]");
     	//to search number
 		regexpNumber = Pattern.compile("[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\\d+)?");
+		bracketList = Arrays.asList("(", ")");
 	}
 
-	private static final List<String> bracketList = Arrays.asList("(", ")");
-	   private void helperParser(String str, List<Token> tokens)
+	
+	   private static void helperParser(String str, List<Token> tokens)
 	   {
 	        if (str.length()>0){ 
 	        Matcher m = regexpSingeleChar.matcher(str);
@@ -208,7 +213,7 @@ class Parser{
 	            }
 	            if(end>start){
 	                String substr = str.substring(start, end);
-	                if (operatorsList.isOperator(substr)) {
+	                if (OperatorsList.isOperator(substr)) {
 	                	tokens.add(new Token(substr,Token.OPERATOR));
 	                }
 	                else 
@@ -224,7 +229,7 @@ class Parser{
 	        }
 	    }
 	}
-	public List<Token> parseString(String text) {
+	public static List<Token> parseString(String text) {
 	
     	List<Token> tokens= new LinkedList<>(); 
         Matcher m = regexpNumber.matcher(text);
@@ -387,6 +392,10 @@ enum Operator {
 	String getString() {
 		return str;
 	}
+	TypeOperator getType() {
+		return type;
+	}
+
 	void   execute() throws MathCalcException {}
 	double execute(double op1, double op2) throws MathCalcException{
 		return 0;
@@ -394,9 +403,8 @@ enum Operator {
 }
 
 class OperatorsList{
-	private Map<String,Operator> map; 
-	
-	OperatorsList(){
+	private static Map<String,Operator> map; 
+	static {
 		map = new HashMap<>();
 		Operator[] operators= Operator.values();
 		for(Operator op: operators) {
@@ -404,12 +412,12 @@ class OperatorsList{
 		}
 	}
 	
-	boolean isOperator (String str){
+	public static boolean  isOperator (String str){
 		boolean isOperator = map.containsKey(str);
 		return isOperator;
 	}
 	
-	public Operator find(String str){
+	public static Operator find(String str){
 		Operator op = map.get(str);
 		return op;
 	}
@@ -498,9 +506,8 @@ enum Function {
 }
 
 class FunctionsList{
-	private Map<String,Function> map; 
-	
-	FunctionsList(){
+	private static Map<String,Function> map; 
+	static {
 		map = new HashMap<>();
 		Function[] functions= Function.values();
 		for(Function fn: functions) {
@@ -508,12 +515,12 @@ class FunctionsList{
 		}
 	}
 	
-	boolean isFunction (String str){
+	public static boolean isFunction (String str){
 		boolean isFunction = map.containsKey(str);
 		return isFunction;
 	}
 	
-	public Function find(String str){
+	public static Function find(String str){
 		Function fn = map.get(str);
 		return fn;
 	}
