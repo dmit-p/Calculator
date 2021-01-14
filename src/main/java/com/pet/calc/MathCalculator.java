@@ -22,7 +22,15 @@ public class MathCalculator{
 						break;
 	        		case Token.OPERATOR: 
 	        			boolean isUMinus = false;
-	        			if (i>0) { 
+	        			if (i==0) {
+	        				if(t.strEq("-")) {
+	        					isUMinus=true;
+	        					t.putString(Operator.UMINUS.getString());
+	        				}
+	        				if(t.strEq("+")) {
+	        					break;
+	        				}
+	        			} else { 
 	        				Token prevToken = inTokens.get(i-1);
 	        				if (t.strEq("-") && (prevToken.strEq("*") || prevToken.strEq("/"))) {
 	        					isUMinus=true;

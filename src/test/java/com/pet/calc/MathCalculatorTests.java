@@ -184,5 +184,22 @@ public class MathCalculatorTests {
      	}
     }
 
-    
+    @Test
+    public void expr21_Test() {
+    	try {
+     	assertTrue(calc.evalute("-(1+1)")== -2.0);
+     	}catch(MathCalcException e) {
+     		fail("Should not have thrown any exception");
+     	}
+    }
+
+    @Test
+    public void expr22_Test() {
+    	try {
+     	assertTrue(calc.evalute("+(1+1)")== 2.0);
+     	}catch(MathCalcException e) {
+     		fail("Should not have thrown any exception");
+     	}
+    }
+
 }
