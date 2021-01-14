@@ -147,5 +147,42 @@ public class MathCalculatorTests {
      		Assert.assertEquals("Unknown word: unknown", e.getMessage());
      	}
     }
+    
+    @Test
+    public void expr17_Test() {
+    	try {
+     	assertTrue(calc.evalute("pow(2,3)")==(Math.pow(2,3)));
+     	}catch(MathCalcException e) {
+     		fail("Should not have thrown any exception");
+     	}
+    }
+    
+    @Test
+    public void expr18_Test() {
+    	try {
+     	assertTrue(calc.evalute("exp(2)")==(Math.exp(2)));
+     	}catch(MathCalcException e) {
+     		fail("Should not have thrown any exception");
+     	}
+    }
 
+    @Test
+    public void expr19_Test() {
+    	try {
+     	assertTrue(calc.evalute("log(10)")==(Math.log(10)));
+     	}catch(MathCalcException e) {
+     		fail("Should not have thrown any exception");
+     	}
+    }
+
+    @Test
+    public void expr20_Test() {
+    	try {
+     	assertTrue(calc.evalute("log10(10)")==(Math.log10(10.0)));
+     	}catch(MathCalcException e) {
+     		fail("Should not have thrown any exception");
+     	}
+    }
+
+    
 }

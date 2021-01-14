@@ -9,7 +9,7 @@ public class MathCalculator{
 	private List<Token> InfixToPostfix(List<Token> inTokens) throws MathCalcException
 	{
 	        OperatorsList opList = new OperatorsList();
-	        FunctionList  funList = new FunctionList();
+	        FunctionsList  funList = new FunctionsList();
 	        Stack<Token>  opStack  = new Stack<>();
 	        List<Token> outTokens = new ArrayList<>();
 	        int i =0;
@@ -88,6 +88,13 @@ public class MathCalculator{
 	        				}
 	        			}
 	        			break;
+	        		case Token.COMMA:
+	        			while ( !opStack.isEmpty()  ) {
+	        				if (!opStack.peek().isLeftBracket()) {
+	        					outTokens.add(opStack.pop());
+	        				}
+	        			}
+	        			break;
 	        		case Token.WORD:
 	        				if(funList.isFunction(t.getString())) {
 	        					opStack.push(t);
@@ -114,12 +121,12 @@ public class MathCalculator{
 	}
     
     public double evalute(String exp) throws MathCalcException{
-    	FunctionList  funList = new FunctionList();
+    	FunctionsList  funList = new FunctionsList();
     	Parser parser = new Parser();
         List<Token> tokens = parser.parseString(exp);
-        /* for debug print tokens
+        // for debug print tokens
 		tokens.stream().forEach((value) -> System.out.println(value));
-		*/
+		//
 		List<Token> postfixTokens = InfixToPostfix(tokens);
 		Stack<Double>  stack  = new Stack<>();
 		for(Token t : postfixTokens)
@@ -165,14 +172,16 @@ public class MathCalculator{
 
 
 class Parser{
+	private static FunctionsList functionsList;
 	private static OperatorsList operatorsList; 
 	private static Pattern regexpSingeleChar;
 	private static Pattern regexpNumber;
 	{
+		functionsList = new FunctionsList();
 		operatorsList = new OperatorsList();
 		//to search for single-character separators (including operators and brackets)
 		//add when adding operators
-		regexpSingeleChar = Pattern.compile("[\\s\\t\\x28-\\x2B\\x2D\\x2F]");
+		regexpSingeleChar = Pattern.compile("[\\s\\t\\x28-\\x2B\\x2C\\x2D\\x2F]");
     	//to search number
 		regexpNumber = Pattern.compile("[-+]?([0-9]*[.])?[0-9]+([eE][-+]?\\d+)?");
 	}
@@ -215,15 +224,24 @@ class Parser{
         while (m.find()) {
 	        int start  = m.start();
 	        int end    = m.end();
-	        helperParser(text.substring(pos, start), tokens);
-	        if (start>0 && (start==pos || text.charAt(start-1)==')')) {
-	       		tokens.add(new Token(text.substring(start, start+1),Token.OPERATOR));
-	       		tokens.add(new Token(text.substring(start+1, end),Token.NUMBER));
-	        }
-	        else
-	        {
-	        	tokens.add(new Token(text.substring(start, end),Token.NUMBER));
-	        }
+	        
+        	if ((start>0) && (text.substring(start-1, start+1).matches("\\w[0-9]"))) {
+        		// not a number found
+        		helperParser(text.substring(pos, end), tokens);
+        	}
+        	else {
+    	        helperParser(text.substring(pos, start), tokens);
+    	        if (start>0 && (start==pos || text.charAt(start-1)==')')) {
+    	        	// found something and a number
+    	       		tokens.add(new Token(text.substring(start, start+1),Token.OPERATOR));
+    	       		tokens.add(new Token(text.substring(start+1, end),Token.NUMBER));
+    	        }
+    	        else
+    	        {
+    	        	// found a number
+    	        	tokens.add(new Token(text.substring(start, end),Token.NUMBER));
+    	        }
+        	}
 	        pos=end;
         }
         helperParser(text.substring(pos, text.length()),  tokens);
@@ -239,6 +257,7 @@ class Token{
 	static final int WORD     = 2;
 	static final int OPERATOR = 3;
 	static final int BRACKET  = 4;
+	static final int COMMA    = 5;
 	
 	private String str;
 	private int type;
@@ -416,26 +435,35 @@ enum Function {
 	},
 	SIN("sin",1){
 		double execute(double op1, double op2) {
-			if (op1>=0) {
-				return Math.sin(op1);
-			}
-			else {
-				System.out.println("ERROR: arg<0");
-				return 0;
-			}
+			return Math.sin(op1);
 		}
 	},
 	COS("cos",1){
 		double execute(double op1, double op2) {
-			if (op1>=0) {
-				return Math.cos(op1);
-			}
-			else {
-				System.out.println("ERROR: arg<0");
-				return 0;
-			}
+			return Math.cos(op1);
 		}
-	};
+	},
+	POW("pow",2){
+		double execute(double op1, double op2) {
+			return Math.pow(op1,op2);	
+		}
+	},
+	EXP("exp",1){
+		double execute(double op1, double op2) {
+			return Math.exp(op1);	
+		}
+	},
+	LOG("log",1){
+		double execute(double op1, double op2) {
+			return Math.log(op1);	
+		}
+	},
+	LOG10("log10",1){
+		double execute(double op1, double op2) {
+			return Math.log10(op1);	
+		}
+	}
+	;
 	
 	private int numArgs;
 	private String str;
@@ -461,10 +489,10 @@ enum Function {
 	}
 }
 
-class FunctionList{
+class FunctionsList{
 	private Map<String,Function> map; 
 	
-	FunctionList(){
+	FunctionsList(){
 		map = new HashMap<>();
 		Function[] functions= Function.values();
 		for(Function fn: functions) {
